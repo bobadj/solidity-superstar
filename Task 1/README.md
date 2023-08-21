@@ -1,15 +1,10 @@
-# Sample Hardhat Project
-
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
-
-Try running some of the following tasks:
-
-```shell
-npx hardhat help
-npx hardhat test
+## Instructions:
+```bash
+npm install
 REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
 ```
 
-Did my best, `29679` is best result. :)
+Goal: Reduce gas cost of `loop()` function up to `30.000`
+with some bonus points if gas is lower than `24.655`
+
+I did my best, the best result is `29.679` :)

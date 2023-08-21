@@ -1,13 +1,8 @@
-# Sample Hardhat Project
-
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
-
-Try running some of the following tasks:
-
-```shell
-npx hardhat help
+## Instructions:
+```bash
+npm install
 npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
 ```
+
+Goal: Using YUL write a function to extract color from NFT metadata packed as `bytes32` variable.
+Metadata uses the last `20` bytes for `address`, the next `3` for color, the following `1` for `isTransferable`, and the next 8 for `tokenId`.
