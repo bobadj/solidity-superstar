@@ -12,6 +12,8 @@ contract SuperStaking is Ownable {
     struct Stake {
         uint256 amount;
         uint256 unlockAt;
+        int256 ethUsdPrice;
+        uint256 totalTokensReceived;
     }
 
     uint256 public minStakingPeriod = 6 * 30 days;
@@ -20,15 +22,10 @@ contract SuperStaking is Ownable {
     mapping(address => Stake) public investments;
     mapping(address => uint) public superTokenAssigned;
 
-    modifier zeroNotAllowed(uint256 _value) {
-        require(_value > 0, "0 not allowed.");
-        _;
-    }
-
     event Withdrawal();
     event EtherReceived(address, uint256);
+    event Withdrawn(address indexed user, uint256 amount);
     event Staked(address indexed user, uint256 amount, uint256 period, int256 atPrice);
-    event Withdrawn(address indexed user, uint256 amount, int256 atPrice);
 
     constructor(address _superToken, address _priceFeed) {
         superToken = SuperToken(_superToken);
@@ -66,8 +63,12 @@ contract SuperStaking is Ownable {
     * @notice in return for staking, address should be rewarded with SPT tokens 1$ = 1SPT
     * @notice should emit Staked() event
     */
-    function stake(uint256 _period) zeroNotAllowed(msg.value) public payable {
+    function stake(uint256 _period) public payable {
         require(_period >= minStakingPeriod, "Staking period can not be less then 6 months");
+        require(msg.value > 0, "0 not allowed.");
+
+        Stake memory staked = investments[msg.sender];
+        require(staked.amount <= 0, "You have to withdraw before another stake.");
 
         (,int256 ethUsdPrice,,uint256 updatedAt,) = priceFeed.latestRoundData();
         require(updatedAt > 0, "Not able to determinate ETH/USD price at this moment");
@@ -79,13 +80,13 @@ contract SuperStaking is Ownable {
         uint256 tokensToAssign = (msg.value * uint256(ethUsdPrice)) * (10**(superToken.decimals() - priceFeed.decimals()));
         superToken.assignTokens(msg.sender, tokensToAssign);
 
-        Stake memory staked = investments[msg.sender];
-
         totalStaked += msg.value;
         superTokenAssigned[msg.sender] += tokensToAssign;
 
         staked.amount += msg.value;
         staked.unlockAt = block.timestamp + _period;
+        staked.ethUsdPrice = ethUsdPrice;
+        staked.totalTokensReceived = tokensToAssign;
         investments[msg.sender] = staked;
 
         emit Staked(msg.sender, msg.value, _period, ethUsdPrice);
@@ -94,35 +95,26 @@ contract SuperStaking is Ownable {
     /*
     * Withdraw/Unstake tokens
     *
-    * @param _amount - amount to be withdrawn
-    *
     * @notice to withdraw tokens address should provide SPT token in return
     * @notice should emit Withdrawn() event
     */
-    function withdraw(uint256 _amount) zeroNotAllowed(_amount) public payable {
+    function withdraw() public payable {
         Stake memory staked = investments[msg.sender];
 
         require(staked.unlockAt > 0, "You did not staked anything yet.");
-        require(staked.amount > 0, "There is nothing to withdraw.");
-        require(_amount <= staked.amount, "You are now allow to withdraw that much.");
         require(block.timestamp > staked.unlockAt, "Staking period is not over yet.");
 
-        (,int256 ethUsdPrice,,uint256 updatedAt,) = priceFeed.latestRoundData();
-        require(updatedAt > 0, "Not able to determinate ETH/USD price at this moment");
+        require(superToken.balanceOf(msg.sender) >= staked.totalTokensReceived, "You dont have enough STP tokens");
+        superToken.returnTokens(msg.sender, staked.totalTokensReceived);
 
-        uint256 tokensToReturn = (_amount * uint256(ethUsdPrice)) * (10**(superToken.decimals() - priceFeed.decimals()));
-        require(superToken.balanceOf(msg.sender) >= tokensToReturn, "You dont have enough STP tokens");
-        superToken.returnTokens(msg.sender, tokensToReturn);
-
-        (bool sent,) = payable(msg.sender).call{value : _amount}("");
+        (bool sent,) = payable(msg.sender).call{value : staked.amount}("");
         require(sent, "Failed to send Ether.");
 
-        staked.amount -= _amount;
-        investments[msg.sender] = staked;
+        delete investments[msg.sender];
 
-        totalStaked -= _amount;
-        superTokenAssigned[msg.sender] -= tokensToReturn;
+        totalStaked -= staked.amount;
+        superTokenAssigned[msg.sender] -= staked.totalTokensReceived;
 
-        emit Withdrawn(msg.sender, _amount, ethUsdPrice);
+        emit Withdrawn(msg.sender, staked.amount);
     }
 }

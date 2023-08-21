@@ -46,7 +46,7 @@ describe("SuperStaking", function () {
     });
 
     it("Should not be allow to withdraw as no stake has been made", async () => {
-        await expect(superStaking.withdraw(stakeValue)).to.be.revertedWith("You did not staked anything yet.");
+        await expect(superStaking.withdraw()).to.be.revertedWith("You did not staked anything yet.");
     });
 
     it("Should emit Stake event", async () => {
@@ -66,25 +66,23 @@ describe("SuperStaking", function () {
         expect(balance.toString() / 1e18).to.be.equal(totalReward / 1e18);
     });
 
-    it("Should not be allow to withdraw before period", async () => {
-        await expect(superStaking.withdraw(stakeValue)).to.be.revertedWith("Staking period is not over yet.");
+    it("Should not be able to stake twice", async () => {
+        await expect(superStaking.stake(stakePeriod, { value: stakeValue })).to.be.revertedWith("You have to withdraw before another stake.");
     });
 
-    it("Should not be able to withdraw more then staked", async () => {
-        await expect(superStaking.withdraw(stakeValue+1)).to.be.revertedWith("You are now allow to withdraw that much.");
+    it("Should not be allow to withdraw before period", async () => {
+        await expect(superStaking.withdraw()).to.be.revertedWith("Staking period is not over yet.");
     });
 
     it("Should withdraw successfully", async () => {
         const unlockTime: number = (await time.latest()) + 16000000;
         await time.increaseTo(unlockTime);
 
-        const ethUsdPrice: number = parseInt([...await priceFeed.latestRoundData()][1]);
-
-        await expect(superStaking.withdraw(stakeValue)).to.be.emit(superStaking, "Withdrawn")
-            .withArgs(await owner.getAddress(), stakeValue, ethUsdPrice);
+        await expect(superStaking.withdraw()).to.be.emit(superStaking, "Withdrawn")
+            .withArgs(await owner.getAddress(), stakeValue);
     });
 
     it("Should not be able to withdraw any more", async () => {
-        await expect(superStaking.withdraw(stakeValue)).to.be.revertedWith("There is nothing to withdraw.");
+        await expect(superStaking.withdraw()).to.be.revertedWith("You did not staked anything yet.");
     });
 });
