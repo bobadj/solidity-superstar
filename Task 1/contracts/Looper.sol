@@ -8,11 +8,9 @@ contract Looper {
 
     function loop() public pure {
         uint256 i;
-        unchecked {
-            do {
-                doStuff(i);
-                ++i;
-            } while (i < 100);
-        }
+        do {
+            doStuff(i);
+            unchecked { ++i; }
+        } while (i < 100);
     }
 }
