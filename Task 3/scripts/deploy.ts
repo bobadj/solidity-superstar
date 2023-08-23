@@ -2,8 +2,10 @@ import { ethers, network } from "hardhat";
 import { BaseContract, ContractFactory } from "ethers";
 
 const SEPOLIA_PRICE_ORACLE: string = '0x694AA1769357215DE4FAC081bf1f309aDC325306';
+const TOKENS_TO_MINT: number = 100000;
 
 async function main() {
+  // deploy SuperToken
   const SuperToken: ContractFactory = await ethers.getContractFactory("SuperToken");
   const superToken: BaseContract = await SuperToken.deploy();
   await superToken.waitForDeployment();
@@ -17,12 +19,11 @@ async function main() {
   const superStakingAddress: string = await superStaking.getAddress();
   console.log(`SuperStaking deployed, address: ${superStakingAddress}, Etherscan: https://${network.name}.etherscan.io/address/${superStakingAddress}`);
 
-  // grants minter role for SuperStaking contract
-  const minterRole: string = ethers.solidityPackedKeccak256(['string'], ['MINTER_ROLE']);
-  const tsx = await superToken.grantRole(minterRole.toString(), await superStaking.getAddress());
+  // mint 100.000 tokens for SuperStaking contract
+  const tsx = await superToken.mint(superStakingAddress, `${TOKENS_TO_MINT}${'0'.repeat(18)}`);
   await tsx.wait(1);
 
-  console.log(`SuperStaking ( ${superStakingAddress} ) has been granted MINTER_ROLE for SuperToken ( ${superTokenAddress} )`);
+  console.log(`${TOKENS_TO_MINT} has been minted for SuperStaking contract`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

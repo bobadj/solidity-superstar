@@ -3,10 +3,10 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "./SuperToken.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract SuperStaking is Ownable {
-    SuperToken internal immutable superToken;
+    ERC20 internal immutable superToken;
     AggregatorV3Interface internal immutable priceFeed;
 
     struct Stake {
@@ -28,7 +28,7 @@ contract SuperStaking is Ownable {
     event Staked(address indexed user, uint256 amount, uint256 period, int256 atPrice);
 
     constructor(address _superToken, address _priceFeed) {
-        superToken = SuperToken(_superToken);
+        superToken = ERC20(_superToken);
         priceFeed = AggregatorV3Interface(_priceFeed);
     }
 
@@ -61,6 +61,7 @@ contract SuperStaking is Ownable {
     *
     * @notice staking period should not be less then 6 months
     * @notice in return for staking, address should be rewarded with SPT tokens 1$ = 1SPT
+    * @notice make sure that contract has enough SPT tokens
     * @notice should emit Staked() event
     */
     function stake(uint256 _period) public payable {
@@ -72,13 +73,14 @@ contract SuperStaking is Ownable {
 
         (,int256 ethUsdPrice,,uint256 updatedAt,) = priceFeed.latestRoundData();
         require(updatedAt > 0, "Not able to determinate ETH/USD price at this moment");
+        uint256 tokensToAssign = (msg.value * uint256(ethUsdPrice)) * (10**(superToken.decimals() - priceFeed.decimals()));
+        require(superToken.balanceOf(address(this)) >= tokensToAssign, "Not enough SPT tokens to complete transfer");
 
         address payable contractAddress = payable(address(this));
         (bool sent,) = contractAddress.call{value : msg.value}("");
         require(sent, "Failed to send Ether.");
 
-        uint256 tokensToAssign = (msg.value * uint256(ethUsdPrice)) * (10**(superToken.decimals() - priceFeed.decimals()));
-        superToken.assignTokens(msg.sender, tokensToAssign);
+        superToken.transfer(msg.sender, tokensToAssign);
 
         totalStaked += msg.value;
         superTokenAssigned[msg.sender] += tokensToAssign;
@@ -96,6 +98,7 @@ contract SuperStaking is Ownable {
     * Withdraw/Unstake tokens
     *
     * @notice to withdraw tokens address should provide SPT token in return
+    * @notice approve or increaseAllowance is required
     * @notice should emit Withdrawn() event
     */
     function withdraw() public payable {
@@ -105,7 +108,7 @@ contract SuperStaking is Ownable {
         require(block.timestamp > staked.unlockAt, "Staking period is not over yet.");
 
         require(superToken.balanceOf(msg.sender) >= staked.totalTokensReceived, "You dont have enough STP tokens");
-        superToken.returnTokens(msg.sender, staked.totalTokensReceived);
+        superToken.transferFrom(msg.sender, address(this), staked.totalTokensReceived);
 
         (bool sent,) = payable(msg.sender).call{value : staked.amount}("");
         require(sent, "Failed to send Ether.");

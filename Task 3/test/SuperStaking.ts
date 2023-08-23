@@ -9,7 +9,7 @@ const SIX_MONTHS_IN_SEC: number = 15552000;
 
 describe("SuperStaking", function () {
     let priceFeed: BaseContract, superStaking: BaseContract, superToken: BaseContract, owner: Signer, availableSigners: Signer[];
-    const priceFeedDecimals: number = 8, superTokenDecimals: number = 18;
+    const priceFeedDecimals: number = 8, superTokenDecimals: number = 18, tokensToMint: number = 100000;
     const stakeValue: number = 10, stakePeriod: number = SIX_MONTHS_IN_SEC;
 
     before("Deploy the contracts first", async function() {
@@ -28,9 +28,10 @@ describe("SuperStaking", function () {
         const PriceFeed: Contract = new ethers.Contract(SEPOLIA_PRICE_ORACLE, AggregatorV3InterfaceABI);
         priceFeed = PriceFeed.connect(owner);
 
-        // grants minter role for SuperStaking contract
-        const minterRole: string = ethers.solidityPackedKeccak256(['string'], ['MINTER_ROLE']);
-        const tsx = await superToken.grantRole(minterRole.toString(), await superStaking.getAddress());
+        // mint 100.000 tokens for SuperStaking contract
+        const superStakingAddress: string = await superStaking.getAddress();
+        // had to do it this way, not able to multiply with 1e18
+        const tsx = await superToken.mint(superStakingAddress, `${tokensToMint}${'0'.repeat(superTokenDecimals)}`);
         await tsx.wait(1);
     });
 
@@ -59,11 +60,11 @@ describe("SuperStaking", function () {
 
     it("Should get STP tokens in return", async () => {
         const address: string = await owner.getAddress();
-        const ethUsdPrice: number = parseInt([...await priceFeed.latestRoundData()][1]);
-        const totalReward: number = (stakeValue * ethUsdPrice) * (10**(superTokenDecimals - priceFeedDecimals));
+        const ethUsdPrice: number = (await priceFeed.latestRoundData()).answer.toString();
+        const totalReward: string = `${stakeValue * ethUsdPrice}${'0'.repeat(superTokenDecimals - priceFeedDecimals)}`;
 
         const balance = await superToken.balanceOf(address);
-        expect(balance.toString() / 1e18).to.be.equal(totalReward / 1e18);
+        expect(ethers.formatEther(balance)).to.be.equal(ethers.formatEther(totalReward));
     });
 
     it("Should not be able to stake twice", async () => {
@@ -76,10 +77,15 @@ describe("SuperStaking", function () {
 
     it("Should withdraw successfully", async () => {
         const unlockTime: number = (await time.latest()) + 16000000;
+        const investorAddress: string = await owner.getAddress();
+        const investorStake: any = await superStaking.investments(investorAddress);
+        const superStakingAddress: string = await superStaking.getAddress();
+
         await time.increaseTo(unlockTime);
 
+        await superToken.approve(superStakingAddress, investorStake.totalTokensReceived);
         await expect(superStaking.withdraw()).to.be.emit(superStaking, "Withdrawn")
-            .withArgs(await owner.getAddress(), stakeValue);
+            .withArgs(investorAddress, stakeValue);
     });
 
     it("Should not be able to withdraw any more", async () => {
