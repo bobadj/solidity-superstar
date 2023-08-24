@@ -22,7 +22,7 @@ contract SuperStaking is Ownable {
     mapping(address => Stake) public investments;
     mapping(address => uint) public superTokenAssigned;
 
-    event Withdrawal();
+    event EtherWithdrawn();
     event EtherReceived(address, uint256);
     event Withdrawn(address indexed user, uint256 amount);
     event Staked(address indexed user, uint256 amount, uint256 period, int256 atPrice);
@@ -51,7 +51,7 @@ contract SuperStaking is Ownable {
         (bool sent,) = ownerAddress.call{value : _amount}("");
         require(sent, "Failed to send Ether.");
 
-        emit Withdrawal();
+        emit EtherWithdrawn();
     }
 
     /*
