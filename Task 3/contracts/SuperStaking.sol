@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "hardhat/console.sol";
 
 contract SuperStaking is Ownable {
     ERC20 internal immutable superToken;
@@ -12,7 +13,7 @@ contract SuperStaking is Ownable {
     struct Stake {
         uint256 amount;
         uint256 unlockAt;
-        int256 ethUsdPrice;
+        uint256 ethUsdPrice;
         uint256 totalTokensReceived;
     }
 
@@ -25,7 +26,7 @@ contract SuperStaking is Ownable {
     event EtherWithdrawn();
     event EtherReceived(address, uint256);
     event Withdrawn(address indexed user, uint256 amount);
-    event Staked(address indexed user, uint256 amount, uint256 period, int256 atPrice);
+    event Staked(address indexed user, uint256 amount, uint256 period, uint256 atPrice);
 
     constructor(address _superToken, address _priceFeed) {
         superToken = ERC20(_superToken);
@@ -71,9 +72,10 @@ contract SuperStaking is Ownable {
         Stake memory staked = investments[msg.sender];
         require(staked.amount <= 0, "You have to withdraw before another stake.");
 
-        (,int256 ethUsdPrice,,uint256 updatedAt,) = priceFeed.latestRoundData();
+        (,int256 price,,uint256 updatedAt,) = priceFeed.latestRoundData();
         require(updatedAt > 0, "Not able to determinate ETH/USD price at this moment");
-        uint256 tokensToAssign = (msg.value * uint256(ethUsdPrice)) * (10**(superToken.decimals() - priceFeed.decimals()));
+        uint ethUsdPrice = uint256(price) * (10**(superToken.decimals() - priceFeed.decimals()));
+        uint256 tokensToAssign = (msg.value * ethUsdPrice) / 10**superToken.decimals();
         require(superToken.balanceOf(address(this)) >= tokensToAssign, "Not enough SPT tokens to complete transfer");
 
         address payable contractAddress = payable(address(this));

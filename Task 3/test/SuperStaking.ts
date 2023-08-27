@@ -12,7 +12,7 @@ describe("SuperStaking", function () {
     const priceFeedDecimals: number = 8,
           superTokenDecimals: number = 18,
           tokensToMint: number = 100000,
-          stakeValue: any = 10,
+          stakeValue: any = ethers.parseEther("0.5"),
           stakePeriod: any = SIX_MONTHS_IN_SEC;
 
     let priceFeed: BaseContract,
@@ -64,7 +64,8 @@ describe("SuperStaking", function () {
 
     it("Should emit Stake event", async () => {
         const address: string = await owner.getAddress();
-        const ethUsdPrice: number = (await priceFeed.latestRoundData()).answer.toString();
+        const price: number = (await priceFeed.latestRoundData()).answer.toString();
+        const ethUsdPrice: string = `${price}${'0'.repeat(superTokenDecimals - priceFeedDecimals)}`;
         const params: any = { value: stakeValue };
 
         await expect(superStaking.stake(stakePeriod, params)).to.emit(superStaking, 'Staked')
@@ -73,8 +74,8 @@ describe("SuperStaking", function () {
 
     it("Should get STP tokens in return", async () => {
         const address: any = await owner.getAddress();
-        const ethUsdPrice: number = (await priceFeed.latestRoundData()).answer.toString();
-        const totalReward: string = `${stakeValue * ethUsdPrice}${'0'.repeat(superTokenDecimals - priceFeedDecimals)}`;
+        const price: number = (await priceFeed.latestRoundData()).answer.toString();
+        const totalReward: string = `${price / 2}${'0'.repeat(superTokenDecimals - priceFeedDecimals)}`;
 
         const balance: BigInt = await superToken.balanceOf(address);
         expect(ethers.formatEther(balance)).to.be.equal(ethers.formatEther(totalReward));
