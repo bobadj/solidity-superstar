@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "hardhat/console.sol";
 
 contract SuperStaking is Ownable {
     ERC20 internal immutable superToken;
@@ -61,8 +60,8 @@ contract SuperStaking is Ownable {
     * @params uint256 _period - staking period
     *
     * @notice staking period should not be less then 6 months
-    * @notice in return for staking, address should be rewarded with SPT tokens 1$ = 1SPT
-    * @notice make sure that contract has enough SPT tokens
+    * @notice in return for staking, address should be rewarded with SUPT tokens 1$ = 1SUPT
+    * @notice make sure that contract has enough SUPT tokens
     * @notice should emit Staked() event
     */
     function stake(uint256 _period) public payable {
@@ -76,7 +75,7 @@ contract SuperStaking is Ownable {
         require(updatedAt > 0, "Not able to determinate ETH/USD price at this moment");
         uint ethUsdPrice = uint256(price) * (10**(superToken.decimals() - priceFeed.decimals()));
         uint256 tokensToAssign = (msg.value * ethUsdPrice) / 10**superToken.decimals();
-        require(superToken.balanceOf(address(this)) >= tokensToAssign, "Not enough SPT tokens to complete transfer");
+        require(superToken.balanceOf(address(this)) >= tokensToAssign, "Not enough SUPT tokens to complete transfer");
 
         address payable contractAddress = payable(address(this));
         (bool sent,) = contractAddress.call{value : msg.value}("");
@@ -99,11 +98,11 @@ contract SuperStaking is Ownable {
     /*
     * Withdraw/Unstake tokens
     *
-    * @notice to withdraw tokens address should provide SPT token in return
+    * @notice to withdraw tokens address should provide SUPT token in return
     * @notice approve or increaseAllowance is required
     * @notice should emit Withdrawn() event
     */
-    function withdraw() public payable {
+    function withdraw() public {
         Stake memory staked = investments[msg.sender];
 
         require(staked.unlockAt > 0, "You did not staked anything yet.");

@@ -25,7 +25,7 @@ Token calculation should be done with ETH/USD Oracle, 1 token for 1$.
 To unstake, a user should provide ERC-20 tokens in return.
 
 ## Contract addresses:
-[Staking - 0xdD43f4356eae9345822D3CA18DE85FAC55e0a375](https://sepolia.etherscan.io/address/0xdD43f4356eae9345822D3CA18DE85FAC55e0a375)
+[Staking - 0x48f028374023556B4FdBB7a60b8261623e3FE977](https://sepolia.etherscan.io/token/0x48f028374023556B4FdBB7a60b8261623e3FE977)
 
-[ERC20 - 0x3d6c5bf37e24f9D34C2a8876CC912582542E2E55](https://sepolia.etherscan.io/token/0x3d6c5bf37e24f9D34C2a8876CC912582542E2E55)
+[ERC20 - 0xd890b347B589aa0C1aedEe13DEA4396B1d6c1074](https://sepolia.etherscan.io/address/0xd890b347B589aa0C1aedEe13DEA4396B1d6c1074)
 
